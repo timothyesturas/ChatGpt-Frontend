@@ -1,0 +1,533 @@
+<div class="app-layout">
+
+  <!-- ================= SIDEBAR ================= -->
+
+  <aside class="sidebar">
+
+    <div class="sidebar-header">
+
+      <div class="brand">
+
+        <div class="brand-icon">
+          ✦
+        </div>
+
+        <span>
+          AI Chat
+        </span>
+
+      </div>
+
+
+      <button
+        type="button"
+        class="new-chat-button"
+        (click)="createConversation()"
+        [disabled]="loading"
+      >
+
+        <span>
+          ＋
+        </span>
+
+        <span class="new-chat-text">
+          New chat
+        </span>
+
+      </button>
+
+    </div>
+
+
+    <div class="conversation-section">
+
+      <div class="section-label">
+        Conversations
+      </div>
+
+
+      <div class="conversation-list">
+
+        @for (
+          conversation of conversations;
+          track conversation.id
+        ) {
+
+          <div
+            class="conversation-item"
+            [class.active]="
+              conversation.id === currentConversationId
+            "
+          >
+
+            @if (
+              editingConversationId === conversation.id
+            ) {
+
+              <div class="rename-container">
+
+                <input
+                  type="text"
+                  [(ngModel)]="editingTitle"
+                  (keydown.enter)="saveRename()"
+                  (keydown.escape)="cancelRename()"
+                  class="rename-input"
+                  autofocus
+                />
+
+
+                <div class="rename-actions">
+
+                  <button
+                    type="button"
+                    title="Save"
+                    (click)="saveRename()"
+                  >
+                    ✓
+                  </button>
+
+
+                  <button
+                    type="button"
+                    title="Cancel"
+                    (click)="cancelRename()"
+                  >
+                    ×
+                  </button>
+
+                </div>
+
+              </div>
+
+            } @else {
+
+              <button
+                type="button"
+                class="conversation-select"
+                (click)="selectConversation(conversation.id)"
+              >
+
+                <span class="conversation-icon">
+                  ◇
+                </span>
+
+
+                <span class="conversation-title">
+                  {{ conversation.title }}
+                </span>
+
+              </button>
+
+
+              <div class="conversation-actions">
+
+                <button
+                  type="button"
+                  title="Rename"
+                  (click)="startRename(conversation)"
+                  [disabled]="loading"
+                >
+                  ✎
+                </button>
+
+
+                <button
+                  type="button"
+                  title="Delete"
+                  (click)="confirmDelete(conversation)"
+                  [disabled]="loading"
+                >
+                  ×
+                </button>
+
+              </div>
+
+            }
+
+          </div>
+
+        }
+
+      </div>
+
+    </div>
+
+
+    <div class="sidebar-footer">
+
+      <div class="status-indicator"></div>
+
+      <span>
+        AI assistant
+      </span>
+
+    </div>
+
+  </aside>
+
+
+  <!-- ================= MAIN CHAT ================= -->
+
+  <main class="chat-container">
+
+
+    <!-- Header -->
+
+    <header class="chat-header">
+
+      <div class="chat-title">
+
+        <div class="chat-avatar">
+          ✦
+        </div>
+
+
+        <div class="chat-title-content">
+
+          <h1>
+            {{ currentConversation?.title }}
+          </h1>
+
+          <span class="chat-status">
+            AI Assistant
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="chat-actions">
+
+        <button
+          type="button"
+          class="header-button"
+          (click)="clearConversation()"
+          [disabled]="
+            loading ||
+            messages.length === 0
+          "
+          title="Clear messages"
+        >
+
+          <span>
+            ⌫
+          </span>
+
+          <span class="button-text">
+            Clear
+          </span>
+
+        </button>
+
+
+        <button
+          type="button"
+          class="header-button danger"
+          (click)="confirmDelete(currentConversation!)"
+          [disabled]="loading"
+          title="Delete conversation"
+        >
+
+          <span>
+            ×
+          </span>
+
+          <span class="button-text">
+            Delete
+          </span>
+
+        </button>
+
+      </div>
+
+    </header>
+
+
+    <!-- ================= CHAT CONTENT ================= -->
+
+    <div
+      #chatBox
+      class="chat-box"
+    >
+
+
+      <!-- Empty state -->
+
+      @if (
+        messages.length === 0 &&
+        !loading
+      ) {
+
+        <div class="empty-chat">
+
+          <div class="empty-icon">
+            ✦
+          </div>
+
+
+          <h2>
+            How can I help?
+          </h2>
+
+
+          <p>
+            Ask a question, request a chart,
+            or start a conversation.
+          </p>
+
+
+          <div class="suggestions">
+
+            <div class="suggestion">
+              <span>💡</span>
+              Explain something
+            </div>
+
+
+            <div class="suggestion">
+              <span>📊</span>
+              Create a chart
+            </div>
+
+
+            <div class="suggestion">
+              <span>💻</span>
+              Help with code
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- Messages -->
+
+      @for (
+        message of messages;
+        track $index
+      ) {
+
+        <div
+          class="message-row"
+          [class.user-row]="
+            message.role === 'user'
+          "
+          [class.ai-row]="
+            message.role === 'assistant'
+          "
+        >
+
+          <div class="message-avatar">
+
+            @if (message.role === 'user') {
+
+              You
+
+            } @else {
+
+              ✦
+
+            }
+
+          </div>
+
+
+          <div
+            class="message"
+            [class.user-message]="
+              message.role === 'user'
+            "
+            [class.ai-message]="
+              message.role === 'assistant'
+            "
+          >
+
+            <div class="message-label">
+
+              @if (message.role === 'user') {
+
+                You
+
+              } @else {
+
+                AI Assistant
+
+              }
+
+            </div>
+
+
+            <div
+              class="message-content"
+              [innerHTML]="
+                formatMessage(message.content)
+              "
+            ></div>
+
+
+            @if (
+              message.role === 'assistant' &&
+              message.chart
+            ) {
+
+              <div class="chart-container">
+
+                <app-chart
+                  [type]="message.chart.type"
+                  [labels]="message.chart.labels"
+                  [values]="message.chart.values"
+                ></app-chart>
+
+              </div>
+
+            }
+
+          </div>
+
+        </div>
+
+      }
+
+
+      <!-- Thinking -->
+
+      @if (loading) {
+
+        <div class="message-row ai-row">
+
+          <div class="message-avatar">
+            ✦
+          </div>
+
+
+          <div class="message ai-message">
+
+            <div class="message-label">
+              AI Assistant
+            </div>
+
+
+            <div class="thinking">
+
+              <span></span>
+              <span></span>
+              <span></span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      }
+
+    </div>
+
+
+    <!-- ================= INPUT ================= -->
+
+    <div class="input-area">
+
+      <form
+        class="chat-form"
+        (ngSubmit)="sendMessage()"
+      >
+
+        <input
+          type="text"
+          name="message"
+          [(ngModel)]="message"
+          placeholder="Message AI Assistant..."
+          [disabled]="loading"
+          autocomplete="off"
+        />
+
+
+        <button
+          type="submit"
+          class="send-button"
+          [disabled]="
+            loading ||
+            !message.trim()
+          "
+        >
+
+          @if (loading) {
+
+            <span class="send-spinner"></span>
+
+          } @else {
+
+            <span>↑</span>
+
+          }
+
+        </button>
+
+      </form>
+
+
+      <div class="input-hint">
+        AI can make mistakes. Check important information.
+      </div>
+
+    </div>
+
+  </main>
+
+
+  <!-- ================= DELETE MODAL ================= -->
+
+  @if (conversationToDeleteId) {
+
+    <div class="modal-backdrop">
+
+      <div class="delete-modal">
+
+        <div class="modal-icon">
+          ×
+        </div>
+
+
+        <h2>
+          Delete conversation?
+        </h2>
+
+
+        <p>
+          This conversation and all of its messages
+          will be permanently deleted.
+        </p>
+
+
+        <div class="modal-actions">
+
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="cancelDelete()"
+          >
+            Cancel
+          </button>
+
+
+          <button
+            type="button"
+            class="delete-button"
+            (click)="deleteConversation()"
+          >
+            Delete conversation
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  }
+
+</div>
